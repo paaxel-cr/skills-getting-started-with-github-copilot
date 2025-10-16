@@ -18,13 +18,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const activityCard = document.createElement("div");
         activityCard.className = "activity-card";
 
-        const spotsLeft = details.max_participants - details.participants.length;
+        const participantsCount = details.participants.length;
+        const spotsLeft = details.max_participants - participantsCount;
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
-          <p>${details.description}</p>
+          <p><strong>Description:</strong> ${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Capacity:</strong> ${participantsCount}/${details.max_participants} (${spotsLeft} spots left)</p>
+          <div class="participants-section">
+            <h5>Current Participants:</h5>
+            ${details.participants.length > 0 
+                ? `<ul class="participants-list">
+                    ${details.participants.map(email => `<li>${email}</li>`).join('')}
+                   </ul>`
+                : '<p class="no-participants">No participants yet</p>'
+            }
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -50,20 +60,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const response = await fetch(
-        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        `/activities/${encodeURIComponent(activity)}/signup`,
         {
           method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `email=${encodeURIComponent(email)}`,
         }
       );
 
-      const result = await response.json();
-
       if (response.ok) {
+        const result = await response.json();
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities(); // Refresh the activities list
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
+        const error = await response.json();
+        messageDiv.textContent = error.detail || "An error occurred";
         messageDiv.className = "error";
       }
 
